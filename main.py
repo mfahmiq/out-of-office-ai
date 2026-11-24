@@ -19,27 +19,33 @@ ENTRY = (
 )
 
 
+def verify_entry(text: str) -> str | None:
+    """Return an error message if the entry fails a bounty rule, else None."""
+    try:
+        text.encode("utf-8")
+    except UnicodeEncodeError as exc:
+        return f"entry is not valid UTF-8: {exc}"
+
+    if not 1 <= len(text) <= 159:
+        return f"entry is {len(text)} chars, must be 1-159"
+
+    if "\n" in text or "\r" in text:
+        return "entry must be a single line"
+
+    if not text.strip():
+        return "entry must not be whitespace-only"
+
+    return None
+
+
 def main() -> int:
     output_dir = os.environ.get("MAKEFUN_OUTPUT_DIR", "/output")
     output_path = os.path.join(output_dir, "entry.txt")
 
-    # Self-verification: UTF-8, 1-159 chars, single line, not whitespace-only.
-    try:
-        ENTRY.encode("utf-8")
-    except UnicodeEncodeError as exc:
-        print(f"FAIL: entry is not valid UTF-8: {exc}", file=sys.stderr)
-        return 1
-
-    if not 1 <= len(ENTRY) <= 159:
-        print(f"FAIL: entry is {len(ENTRY)} chars, must be 1-159", file=sys.stderr)
-        return 1
-
-    if "\n" in ENTRY or "\r" in ENTRY:
-        print("FAIL: entry must be a single line", file=sys.stderr)
-        return 1
-
-    if not ENTRY.strip():
-        print("FAIL: entry must not be whitespace-only", file=sys.stderr)
+    # Self-verification before writing anything.
+    error = verify_entry(ENTRY)
+    if error is not None:
+        print(f"FAIL: {error}", file=sys.stderr)
         return 1
 
     os.makedirs(output_dir, exist_ok=True)
